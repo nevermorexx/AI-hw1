@@ -2,6 +2,7 @@ import pegSolitaireUtils
 import config
 import stack
 import heapq
+import copy
 
 def ItrDeepSearch(pegSolitaireObject):
     #################################################
@@ -25,11 +26,10 @@ def ItrDeepSearch(pegSolitaireObject):
     #################################################
 
     depth = 0
-    is_solvable = True
-
     oldTotolExpandedNodes = [0]
+    #this list is used to store the count of expanded nodes at different depths
+
     #getNextState function is used in the my_IDS function
-    #is_solvable is used when the game has no solution, and can avoid infinite loop
     while (not pegSolitaireObject.reachDestination()):
         depth += 1
         oldTotolExpandedNodes.append(my_IDS(pegSolitaireObject,depth))
@@ -70,21 +70,16 @@ def my_IDS(pegSolitaireObject,depth):
     while (myStack.size() > 1):
         currentFence = myStack.pop()
         oldPos = myStack.pop()
-        while (oldPos[0] == -1):
-            print "i reached here"
-            print "TRACE :"
+        while (oldPos[0] == -1):   #in the while loop, indicating higher depth nodes are all checked
             if myStack.isEmpty():  #checked all cases
                 pegSolitaireObject.traceBack()
                 return currentDepthNodesExpanded
             currentDepth -= 1
             oldPos = myStack.pop()
             pegSolitaireObject.traceBack()
-            for row in pegSolitaireObject.gameState:
-                print row
         oldDir = myStack.pop()
         pegSolitaireObject.getNextState(oldPos,oldDir)
         currentDepthNodesExpanded += 1
-        print "move %d,%d by %d,%d" %(oldPos[0],oldPos[1],oldDir[0],oldDir[1])
         myStack.push(currentFence)
 
         if pegSolitaireObject.reachDestination():
@@ -102,15 +97,7 @@ def my_IDS(pegSolitaireObject,depth):
                 myStack.push(currentFence)
                 currentDepth += 1
             else:
-                print "BEFORE TRACE BACK"
-                print pegSolitaireObject.trace
-                for row in pegSolitaireObject.gameState:
-                    print row
                 pegSolitaireObject.traceBack()
-                print "AFTER TRACE BACK"
-                print pegSolitaireObject.trace
-                for row in pegSolitaireObject.gameState:
-                    print row
 
     return currentDepthNodesExpanded
 
@@ -138,14 +125,81 @@ def aStarOne(pegSolitaireObject):
     #
     #################################################
 
-    #################################################
-    #The algorithm for aStarOne is to assign each cell with different values: the closer to the goal cell,
-    #the smaller value it has. For all expanded nodes, we calculate the total value of the gameState
-    #for each subnode. Use a heap to store all the expanded nodes, use the total value we calculated as the key.
-    #Push the nodes with lager values first, because there are relatively more nodes far away from the center.
-    #Nodes with smaller values get pushed later, so they can be checked earlier to improve the performance.
-    
+    #This algorithm counts the number of isolated nodes(i.e. a node wholse N.W.E.S. four directions neibours
+    # are not pegs.H(n) = #isolated nodes. we use heap to store the pegSolitaireObject for each nodes and the
+    # number as the key. We always expand the node in the heap with least number of isolated
+    # nodes(i.e. with least value). We keep searching until we find the goal. If the heap becomes empty
+    # and the goal is not fount, the map has no solution.
+
+    directionSets = config.DIRECTION.values()
+    myHeap = []
+
+    #init the heap with first depth expanded nodes
+    for row in range(7):
+        for col in range(7):
+            if pegSolitaireObject.gameState[row][col] == 1:
+                oldPos = (row, col)
+                for direction in directionSets:
+                    if pegSolitaireObject.is_validMove(oldPos, direction):
+                        pegSolitaireObject.getNextState(oldPos,direction)
+                        print "Move from %d,%d by %d,%d" %(oldPos[0],oldPos[1],direction[0],direction[1])
+                        if pegSolitaireObject.reachDestination():
+                            return True
+                        newPegObj = copy.deepcopy(pegSolitaireObject)
+                        heapq.heappush(myHeap,(getIsolatedNodesCount(newPegObj),newPegObj))
+                        pegSolitaireObject.traceBack()
+
+    while (len(myHeap) != 0):   #pop the node with min value and expand that node, add new nodes to the heap
+        currentNode = heapq.heappop(myHeap)
+        currentPegObj = copy.deepcopy(currentNode[1])
+        print "TRACE:"
+        print currentPegObj.trace
+        for i in range(7):
+            for j in range(7):
+                if currentPegObj.gameState[i][j] == 1:
+                    oldPos = (i, j)
+                    for direction in directionSets:
+                        if currentPegObj.is_validMove(oldPos,direction):
+                            currentPegObj.getNextState(oldPos,direction)
+                            print "Move from %d,%d by %d,%d" %(oldPos[0],oldPos[1],direction[0],direction[1])
+                            if currentPegObj.reachDestination():
+                                pegSolitaireObject = copy.deepcopy(currentPegObj)
+                                print pegSolitaireObject.trace
+                                print currentPegObj.nodesExpanded
+                                return True
+                            newPegObj = copy.deepcopy(currentPegObj)
+                            heapq.heappush(myHeap,(getIsolatedNodesCount(newPegObj),newPegObj))
+                            currentPegObj.traceBack()
+    if (len(myHeap) == 0):
+        print "No solution for this map"
+
     return True
+
+def getIsolatedNodesCount(pegSolitaireObject):
+
+    directionSets = config.DIRECTION.values()
+    count = 0
+    for row in range(7):
+        for col in range(7):
+            if pegSolitaireObject.gameState[row][col] == 1:
+                oldPos = (row, col)
+                directionCount = 0
+                for directionIndex in range(4):
+                    direction = directionSets[directionIndex]
+                    r1 = oldPos[0] + direction[0]
+                    c1 = oldPos[1] + direction[1]
+                    if r1 < 0 or r1 > 6 or c1 < 0 or c1 > 6:
+                        directionCount += 1
+                        continue
+                    else:
+                        if pegSolitaireObject.gameState[r1][c1] != 0:
+                            break
+                        else:
+                            directionCount += 1
+
+                if directionCount == 4:
+                    count += 1
+    return count
 
 
 def aStarTwo(pegSolitaireObject):
@@ -168,5 +222,14 @@ def aStarTwo(pegSolitaireObject):
     # you must save the trace of the execution in pegSolitaireObject.trace
     # SEE example in the PDF to see what to return
     #
+    ################################################
+
     #################################################
+    #The algorithm for aStarOne is to assign each cell with different values: the closer to the goal cell,
+    # the smaller value it has. For all expanded nodes, we calculate the total value of the gameState
+    # for each subnode. H(n) = total value of the gameState.
+    # Use a heap to store all the expanded nodes, use the total value we calculated as the key.
+    # Then sort the heap. Nodes with smaller values get poped from the heap earlier, so they can be
+    # checked from the stack earlier to improve the performance.
+    # If the heap becomes empty and the goal is not fount, the map has no solution.
     return True
