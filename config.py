@@ -20,7 +20,7 @@
 studentsDetails = {
 "ruluo": ("LUO_RUI", "110457392"),
 
-"NETID_stud2": ("NAME", "STONY ID #")
+"ninjiang": ("JIANG_NING", "109905981")
 }
 
 #####################################

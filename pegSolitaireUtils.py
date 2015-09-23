@@ -116,6 +116,7 @@ class game:
 		return True
 
 	def traceBack(self):
+
 		traceLenth = len(self.trace)
 
 		newPos = self.trace[traceLenth - 1]
@@ -126,11 +127,10 @@ class game:
 		self.gameState[midPos[0]][midPos[1]] = 1
 		self.gameState[oldPos[0]][oldPos[1]] = 1
 
-		lastPos = self.trace[traceLenth-1]
-		self.trace.remove(lastPos)
+		del self.trace[traceLenth-1]
 		traceLenth = len(self.trace)
-		lastPos = self.trace[traceLenth-1]
-		self.trace.remove(lastPos)
+		del self.trace[traceLenth-1]
+
 
 
 		return oldPos
