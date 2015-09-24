@@ -142,7 +142,7 @@ def aStarOne(pegSolitaireObject):
                 for direction in directionSets:
                     if pegSolitaireObject.is_validMove(oldPos, direction):
                         pegSolitaireObject.getNextState(oldPos,direction)
-                        print "Move from %d,%d by %d,%d" %(oldPos[0],oldPos[1],direction[0],direction[1])
+
                         if pegSolitaireObject.reachDestination():
                             return True
                         newPegObj = copy.deepcopy(pegSolitaireObject)
@@ -152,8 +152,7 @@ def aStarOne(pegSolitaireObject):
     while (len(myHeap) != 0):   #pop the node with min value and expand that node, add new nodes to the heap
         currentNode = heapq.heappop(myHeap)
         currentPegObj = copy.deepcopy(currentNode[1])
-        print "TRACE:"
-        print currentPegObj.trace
+
         for i in range(7):
             for j in range(7):
                 if currentPegObj.gameState[i][j] == 1:
@@ -161,11 +160,13 @@ def aStarOne(pegSolitaireObject):
                     for direction in directionSets:
                         if currentPegObj.is_validMove(oldPos,direction):
                             currentPegObj.getNextState(oldPos,direction)
-                            print "Move from %d,%d by %d,%d" %(oldPos[0],oldPos[1],direction[0],direction[1])
+                            pegSolitaireObject.nodesExpanded += 1
+                            # because here we move the copy of pegSolitaireObject, so the total nodesExpanded
+                            # should be added by one in pegSolitaireObject
                             if currentPegObj.reachDestination():
-                                pegSolitaireObject = copy.deepcopy(currentPegObj)
-                                print pegSolitaireObject.trace
-                                print currentPegObj.nodesExpanded
+                                pegSolitaireObject.trace = copy.deepcopy(currentPegObj.trace)
+                                # similar as above, we moved the copy of the pegSolitaireObject, so
+                                # we need to copy back the final trace
                                 return True
                             newPegObj = copy.deepcopy(currentPegObj)
                             heapq.heappush(myHeap,(getIsolatedNodesCount(newPegObj),newPegObj))
@@ -227,9 +228,60 @@ def aStarTwo(pegSolitaireObject):
     #################################################
     #The algorithm for aStarOne is to assign each cell with different values: the closer to the goal cell,
     # the smaller value it has. For all expanded nodes, we calculate the total value of the gameState
-    # for each subnode. H(n) = total value of the gameState.
+    # for each subnode. value(cell) = abs(x-3) + abs(y-3), H(n) = total value of the gameState.
     # Use a heap to store all the expanded nodes, use the total value we calculated as the key.
     # Then sort the heap. Nodes with smaller values get poped from the heap earlier, so they can be
     # checked from the stack earlier to improve the performance.
     # If the heap becomes empty and the goal is not fount, the map has no solution.
+    directionSets = config.DIRECTION.values()
+    myHeap = []
+
+    #init the heap with first depth expanded nodes
+    for row in range(7):
+        for col in range(7):
+            if pegSolitaireObject.gameState[row][col] == 1:
+                oldPos = (row, col)
+                for direction in directionSets:
+                    if pegSolitaireObject.is_validMove(oldPos, direction):
+                        pegSolitaireObject.getNextState(oldPos,direction)
+                        if pegSolitaireObject.reachDestination():
+                            return True
+                        newPegObj = copy.deepcopy(pegSolitaireObject)
+                        heapq.heappush(myHeap,(getTotalValue(newPegObj),newPegObj))
+                        pegSolitaireObject.traceBack()
+
+    while (len(myHeap) != 0):   #pop the node with min value and expand that node, add new nodes to the heap
+        currentNode = heapq.heappop(myHeap)
+        currentPegObj = copy.deepcopy(currentNode[1])
+
+        for i in range(7):
+            for j in range(7):
+                if currentPegObj.gameState[i][j] == 1:
+                    oldPos = (i, j)
+                    for direction in directionSets:
+                        if currentPegObj.is_validMove(oldPos,direction):
+                            currentPegObj.getNextState(oldPos,direction)
+                            pegSolitaireObject.nodesExpanded += 1
+                            if currentPegObj.reachDestination():
+                                pegSolitaireObject.trace = copy.deepcopy(currentPegObj.trace)
+                                return True
+                            newPegObj = copy.deepcopy(currentPegObj)
+                            heapq.heappush(myHeap,(getTotalValue(newPegObj),newPegObj))
+                            currentPegObj.traceBack()
+    if (len(myHeap) == 0):
+        print "No solution for this map"
     return True
+
+#get total value of the gameState
+def getTotalValue(pegSolitaireObject):
+    totalValue = 0
+    for i in range(7):
+        for j in range(7):
+            if pegSolitaireObject.gameState[i][j] == 1:
+                totalValue += getCellValue(i,j)
+
+    return totalValue
+
+#use the manhatton function to assign each cell with a peg a value
+def getCellValue(row, col):
+    return abs(row-3)+abs(col-3)
