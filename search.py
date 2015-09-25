@@ -131,6 +131,11 @@ def aStarOne(pegSolitaireObject):
     # nodes(i.e. with least value). We keep searching until we find the goal. If the heap becomes empty
     # and the goal is not fount, the map has no solution.
 
+
+    #################################################
+    #This algorithm uses heap to store the pegSolitaireOnjects, thus avoiding revisiting the nodes.
+    #Which helps to gain the extra points.
+
     directionSets = config.DIRECTION.values()
     myHeap = []
 
